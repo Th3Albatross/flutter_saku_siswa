@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:saku_siswa/services/storage_service.dart';
 
 class SakuSiswaApp extends StatelessWidget {
   const SakuSiswaApp({super.key});
@@ -32,37 +33,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   void initState() {
-    super.initState();
-    _muatDataLokal();
-  }
-
-  // --- LOGIKA SHAREDPREFERENCES --- //
-
-  // 1. Membaca data dari SharedPreferences
-  Future<void> _muatDataLokal() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _totalSaldo = prefs.getInt('total_saldo') ?? 0;
-      
-      // Membaca list string JSON dan di-decode kembali ke List Map
-      List<String>? dataStringList = prefs.getStringList('riwayat');
-      if (dataStringList != null) {
-        _riwayatPengeluaran = dataStringList
-            .map((item) => jsonDecode(item) as Map<String, dynamic>)
-            .toList();
-      }
+    muatDataLokal().then((data) {
+	_totalSaldo = data['saldo'];
+	_riwayatPengeluaran = data['riwayat'];
     });
-  }
 
-  // 2. Menyimpan data ke SharedPreferences
-  Future<void> _simpanDataLokal() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('total_saldo', _totalSaldo);
-
-    // Mengubah List Map menjadi List String JSON
-    List<String> dataStringList =
-        _riwayatPengeluaran.map((item) => jsonEncode(item)).toList();
-    await prefs.setStringList('riwayat', dataStringList);
+    super.initState();
   }
 
   // 3. Menambah transaksi baru
@@ -78,7 +54,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
     });
 
-    _simpanDataLokal(); // Simpan permanen ke storage HP
+    simpanDataLokal(_totalSaldo, _riwayatPengeluaran); // Simpan permanen ke storage HP
   }
 
   // 4. Modal Bottom Sheet Form Input (UI Modern)
@@ -172,7 +148,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     TextButton.icon(
                       onPressed: () {
                         setState(() => _totalSaldo += 50000);
-                        _simpanDataLokal();
+                        simpanDataLokal(_totalSaldo, _riwayatPengeluaran);
                       },
                       icon: const Icon(Icons.add_card, color: Colors.white),
                       label: const Text('Isi Uang Saku (+Rp50.000)',
